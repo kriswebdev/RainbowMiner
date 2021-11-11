@@ -275,3 +275,49 @@ if ($Config.CovalentAPIKey) {
         }
     }
 }
+
+#
+# SEROPool Paid
+# Not a wallet info, but better than nothing
+#
+
+if ($Session.Config.Coins.SERO) {
+
+    $PoolName = "SeroPool"
+    $Pool_Currency = "SERO"
+    $PoolConfig = $Config.Pools.$PoolName
+
+    if ($PoolConfig.Wallets.$Pool_Currency -and -not ($Config.ExcludeCoinsymbolBalances.Count -and $Config.ExcludeCoinsymbolBalances -contains $Pool_Currency)) {
+
+        $Request = [PSCustomObject]@{}
+        try {
+          Write-Host "Hello3.1"
+            $Wallet_Address = $PoolConfig.$Pool_Currency
+            Write-Host "Hello3.2"
+            Write-Host $Wallet_Address
+            $Request = Invoke-RestMethodAsync "https://pool.sero.cash/api/accounts/$($Wallet_Address)" -cycletime ($Config.BalanceUpdateMinutes*60)
+
+            if ($Request.stats) {
+
+                $Divisor  = [Decimal]1e9
+                $Paid  = [Decimal]$Request.stats.paid / $Divisor
+
+                [PSCustomObject]@{
+                        Caption     = "$Name $($Pool_Currency) $($Wallet_Address)"
+                        BaseName    = $Name
+                        Info        = " $($Wallet_Address.Substring(0,3))..$($Wallet_Address.Substring($Wallet_Info.Length-3,3)) SEROPool"
+                        Currency    = $Pool_Currency
+                        Balance     = $Paid
+                        Pending     = 0
+                        Total       = $Paid
+                        Payouts     = @()
+                        LastUpdated = (Get-Date).ToUniversalTime()
+                }
+            }
+        }
+        catch {
+            if ($Error.Count){$Error.RemoveAt(0)}
+        }
+
+    }
+}
